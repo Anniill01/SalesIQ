@@ -1,0 +1,7 @@
+{
+  "name": "SalesIQ: Coach, Intel, QA & Live",
+  "description": "4-in-1 Platform: Call Coach, Deal Intelligence, Bulk Compliance QA (CRM Sync), and Live Voice Training.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
