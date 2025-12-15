@@ -23,11 +23,12 @@ import { TrendsDashboard } from './components/trends/TrendsDashboard';
 import { LiveCopilot } from './components/live/LiveCopilot';
 import { DealUpload } from './components/deal/DealUpload';
 import { DealDashboard } from './components/deal/DealDashboard';
+import { VideoGenerator } from './components/video/VideoGenerator';
 import { exportSingleCallReport } from './services/exportService'; 
 import { saveCall as saveCallToDb, seedDemoCalls, getAllCalls, getDemoDealAnalysis } from './services/storageService'; 
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'COACH' | 'QA' | 'LIBRARY' | 'TRENDS' | 'LIVE' | 'DEAL'>('COACH');
+  const [currentView, setCurrentView] = useState<'COACH' | 'QA' | 'LIBRARY' | 'TRENDS' | 'LIVE' | 'DEAL' | 'VIDEO'>('COACH');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // COACHING STATE
@@ -83,7 +84,7 @@ const App: React.FC = () => {
       const calls = await getAllCalls();
       const demoCall = calls.find(c => c.fileName.includes('Discovery')) || calls[0];
 
-      // Simulate network delay to show the Vibe animations
+      // REDUCED TIMER TO 1000ms FOR SMOOTHER VIDEO FLOW
       setTimeout(() => {
         if (demoCall) {
           setResult(demoCall.analysisData);
@@ -96,7 +97,7 @@ const App: React.FC = () => {
           setError("Could not load demo data.");
           setAppState(AppState.ERROR);
         }
-      }, 2000);
+      }, 1000);
     } catch (e) {
       console.error(e);
       setError("Failed to load demo.");
@@ -120,12 +121,12 @@ const App: React.FC = () => {
   const handleLoadDemoDeal = () => {
     setIsDealAnalyzing(true);
     setDealError(null);
-    // Simulate AI processing delay
+    // REDUCED TIMER TO 1200ms FOR SMOOTHER VIDEO FLOW
     setTimeout(() => {
         const demoData = getDemoDealAnalysis();
         setDealAnalysis(demoData);
         setIsDealAnalyzing(false);
-    }, 2500);
+    }, 1200);
   };
 
   const resetApp = () => {
@@ -253,6 +254,7 @@ const App: React.FC = () => {
       case 'LIBRARY': return <CallLibrary onLoadCall={loadFromLibrary} />;
       case 'TRENDS': return <TrendsDashboard />;
       case 'LIVE': return <LiveCopilot />;
+      case 'VIDEO': return <VideoGenerator />;
       case 'DEAL': return !dealAnalysis ? (
         <div className="animate-fade-in">
            {dealError && (
@@ -385,7 +387,7 @@ const App: React.FC = () => {
                    <div className="text-center mb-10 animate-fade-in-up px-4">
                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-4 border border-blue-100">
                        <Sparkles className="w-3 h-3" />
-                       <span>POWERED BY GEMINI 3.0 PRO</span>
+                       <span>POWERED BY GEMINI 2.5 FLASH & PRO</span>
                      </div>
                      <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight leading-tight">
                        Turn Sales Calls into <br/>

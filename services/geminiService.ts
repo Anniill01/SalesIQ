@@ -16,6 +16,32 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// Helper to try and salvage truncated JSON
+const safeJSONParse = (jsonString: string): any => {
+  try {
+    return JSON.parse(jsonString);
+  } catch (e) {
+    console.warn("JSON Parse failed, attempting to repair truncated JSON...");
+    // Naive repair: Try to close open braces/brackets
+    // This is a best-effort repair for demo purposes
+    let repaired = jsonString.trim();
+    const openBraces = (repaired.match(/{/g) || []).length;
+    const closeBraces = (repaired.match(/}/g) || []).length;
+    const openBrackets = (repaired.match(/\[/g) || []).length;
+    const closeBrackets = (repaired.match(/]/g) || []).length;
+
+    for (let i = 0; i < (openBraces - closeBraces); i++) repaired += "}";
+    for (let i = 0; i < (openBrackets - closeBrackets); i++) repaired += "]";
+    
+    try {
+      return JSON.parse(repaired);
+    } catch (e2) {
+      console.error("Failed to repair JSON:", e2);
+      throw new Error("Analysis generated too much data and was cut off. Please try a shorter audio file.");
+    }
+  }
+};
+
 // --- IMAGE GENERATION FOR AVATARS ---
 const generateProspectAvatar = async (profile: ProspectProfile, apiKey: string): Promise<string | undefined> => {
   try {
@@ -96,12 +122,12 @@ export const analyzeFullDeal = async (interactions: DealInteraction[]): Promise<
   }
 
   try {
+    // SWITCHED TO GEMINI 2.5 FLASH FOR SPEED
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview', // Using 3.0 Pro for massive context and deep reasoning
+      model: 'gemini-2.5-flash', 
       contents: { parts },
       config: {
         temperature: 0.2,
-        thinkingConfig: { thinkingBudget: 10240 }, // High thinking budget for complex deal analysis
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -186,14 +212,12 @@ export const analyzeFullDeal = async (interactions: DealInteraction[]): Promise<
       }
     });
 
-    const json = JSON.parse(response.text || "{}");
+    const json = safeJSONParse(response.text || "{}");
     return json as FullDealAnalysis;
 
   } catch (err: any) {
-    if (err.message?.includes('403') || err.message?.includes('Permission denied')) {
-        throw new Error("Permission denied. Check API Key or Model Access (gemini-3-pro-preview).");
-    }
-    throw err;
+    console.error("Deal Analysis Error:", err);
+    throw new Error("Deal analysis failed. Try fewer files or check API key.");
   }
 };
 
@@ -209,67 +233,47 @@ export const analyzeSalesCall = async (audioFile: File): Promise<SalesAnalysisRe
   const ai = new GoogleGenAI({ apiKey });
   const base64Audio = await fileToBase64(audioFile);
 
+  // Fallback if type is missing or not specific enough
   const mimeType = audioFile.type || 'audio/mp3'; 
 
   const prompt = `
     You are an Enterprise Sales Ops & Intelligence Engine. Analyze this sales call audio.
     
-    IMPORTANT: You must be deterministic. If you analyze the same audio twice, you must return the EXACT same metrics.
+    IMPORTANT: 
+    1. Output strictly valid JSON.
+    2. BE CONCISE. Do not be overly verbose in the transcript if the call is long.
     
     Tasks:
     1. **Transcript & Sentiment**: 
-       - Transcribe the FULL audio verbatim. Do not summarize or truncate the transcript. 
+       - Generate a **Condensed Smart Transcript**. Focus on key dialogue exchanges, questions, and answers. Summarize filler or repetitive sections to save space.
        - Diarize text (Salesperson vs Prospect).
-       - **OBJECTIONS**: Identify objection segments. For EACH objection, strict adherence is required:
-         - Set 'isObjection' to true.
-         - Populate 'objectionHandlingFeedback' with a CONSTRUCTIVE critique of how the rep handled it, AND a verbatim 'Better Response' they could have used.
+       - **OBJECTIONS**: Identify objection segments.
     
-    2. **Quantitative Metrics (CRITICAL - USE THINKING PROCESS)**:
-       - **Talk Ratio**: You MUST estimate the time duration of speech for the Salesperson vs Prospect.
-         - 'sales': Percentage (0-100).
-         - 'prospect': Percentage (0-100). Sum must be 100.
-       - **Interruptions**: Count the exact number of times the Salesperson spoke while the Prospect was still speaking (overlapping speech). Return an integer.
-       - **Listening Ratio**: Calculate this strictly as (100 - Sales Talk Ratio).
-       - **WPM**: Average words per minute for the salesperson.
-       - **Silence Analysis**:
-         - **Smart Silence**: Count instances where a pause > 2s led to the prospect sharing deeper, valuable information.
-         - **Awkward Silence**: Count instances where a pause > 3s led to confusion or the rep speaking again just to fill the void.
+    2. **Quantitative Metrics**:
+       - Estimate Talk Ratio, Interruptions, Listening Ratio, WPM.
+       - **Silence Analysis**: Identify 'Smart Silence' vs 'Awkward Silence'.
     
-    3. **Key Topics Detected**:
-       - Extract 5-7 distinct BUSINESS topics (e.g., "Pricing", "Security", "Roadmap"). Do not use generic terms like "Intro".
-       - **Relevance**: 0-100 based on time spent.
-       - **Description**: Specific context.
+    3. **Key Topics Detected**: Extract 5-7 distinct BUSINESS topics.
 
-    4. **Deal Intelligence (Deep Reasoning)**: 
-       - **Buyer Intent**: Classify signals into [Buying, Pricing, Timeline, Feature Fit, Risk].
-         - **Score**: Confidence level (0-100).
-         - **Evidence**: MUST be a direct quote from the transcript.
-       - **Predicted Outcome**:
-         - **Score**: Probability of winning (0-100).
-         - **Label**: High/Medium/Low Likelihood.
-         - **Rationale**: Derive from BANT (Budget, Authority, Need, Timeline) analysis.
+    4. **Deal Intelligence**: 
+       - **Buyer Intent**: Classify signals.
+       - **Predicted Outcome**: Win probability based on BANT.
 
     5. **Coaching (DEEP & SPECIFIC)**: 
-       - **Strengths (Winning Moments)**: Identify 3-5 specific moments where the rep demonstrated exceptional skill. Describe the CONTEXT and the SKILL (e.g., "Effective Mirroring: Rep repeated the prospect's concern about 'deployment time' to show active listening").
-       - **Missed Opportunities**: Identify 3-5 concrete instances where the rep missed a cue, failed to dig deeper, or ignored a risk. Be actionable.
-       - **Key Questions**: Extract the 3-5 most powerful OPEN-ENDED discovery questions asked by the rep verbatim.
-       - **Key Objections Handled**: List specific objections raised. Format: "Objection: [Topic] - Handling: [Critique of technique used]".
-       - **Sales Pitch (First 90s Analysis)**:
-         - **Hook**: Did they capture attention? Critique the opening line.
-         - **Clarity**: Was the value proposition clear and relevant?
-         - **Call to Action**: Was the ask/next step clear and confident?
+       - Strengths, Missed Opportunities, Key Questions, Key Objections.
+       - **Sales Pitch**: Assess Hook, Clarity, CTA.
     
     6. **Compliance**: Check for forbidden phrases.
     7. **Customer Profile**: DiSC analysis.
-    8. **Advanced**: Competitors mentioned.
+    8. **Follow Up**: Draft a follow up email.
 
     Return strictly JSON matching the schema.
   `;
 
   try {
-    // UPGRADE: Using gemini-3-pro-preview for complex reasoning tasks
+    // SWITCHED TO GEMINI 2.5 FLASH FOR SPEED & TOKEN EFFICIENCY
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-2.5-flash',
       contents: {
         parts: [
           {
@@ -282,13 +286,9 @@ export const analyzeSalesCall = async (audioFile: File): Promise<SalesAnalysisRe
         ]
       },
       config: {
-        temperature: 0,        // Zero temperature for deterministic results
-        topK: 1,               // Restrict token selection to top 1
-        topP: 0.1,             // Tight probability mass
-        // COMP_UPGRADE: Increased output limit to ensure full transcript for long calls (13m+)
-        maxOutputTokens: 65536, 
-        // COMP_UPGRADE: Increased thinking budget to 10k for deep reasoning to win competition
-        thinkingConfig: { thinkingBudget: 10240 }, 
+        temperature: 0.1,        
+        // Remove explicit maxOutputTokens to rely on model default or set a safe high limit if needed.
+        // gemini-2.5-flash usually handles large context well, but we want to avoid cutting off JSON.
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -302,7 +302,7 @@ export const analyzeSalesCall = async (audioFile: File): Promise<SalesAnalysisRe
                   text: { type: Type.STRING },
                   timestamp: { type: Type.STRING },
                   isObjection: { type: Type.BOOLEAN },
-                  objectionHandlingFeedback: { type: Type.STRING, description: "Critique of the rep's response and a specific suggested better response." }
+                  objectionHandlingFeedback: { type: Type.STRING }
                 }
               }
             },
@@ -525,9 +525,9 @@ export const analyzeSalesCall = async (audioFile: File): Promise<SalesAnalysisRe
     if (!text) throw new Error("No response from Gemini.");
 
     try {
-      const json = JSON.parse(text) as SalesAnalysisResult;
+      const json = safeJSONParse(text) as SalesAnalysisResult;
       
-      // COMP_UPGRADE: Chain Multimodal Capability
+      // Chain Multimodal Capability
       // Once we have the text profile, generate an Avatar Image for the prospect
       if (json.customerProfile) {
          const avatarBase64 = await generateProspectAvatar(json.customerProfile, apiKey);
@@ -542,10 +542,8 @@ export const analyzeSalesCall = async (audioFile: File): Promise<SalesAnalysisRe
       throw new Error("Invalid JSON response from AI model.");
     }
   } catch (err: any) {
-    if (err.message?.includes('403') || err.message?.includes('Permission denied')) {
-        throw new Error("Permission denied by Gemini API. Your API Key might not have access to the 'gemini-3-pro-preview' model. Please check your Google AI Studio permissions.");
-    }
-    throw err;
+    console.error("Call Analysis Error:", err);
+    throw new Error(err.message || "Call analysis failed. Please check your API key or try a shorter audio file.");
   }
 };
 

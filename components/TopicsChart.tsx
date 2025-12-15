@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Topic, Competitor } from '../types';
-import { FileText, X, Swords, ChevronRight, Shield } from 'lucide-react';
+import { FileText, X, Swords, ChevronRight, Shield, Zap, Sparkles } from 'lucide-react';
 
 interface TopicsChartProps {
   topics: Topic[];
@@ -14,15 +14,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-white p-4 border border-slate-200 shadow-lg rounded-xl max-w-xs z-50">
-        <p className="font-bold text-slate-800 mb-1">{data.name}</p>
+      <div className="bg-slate-800 text-white p-4 border border-slate-700 shadow-xl rounded-xl max-w-xs z-50 animate-fade-in">
+        <p className="font-bold text-white mb-2 flex items-center gap-2">
+           <Zap className="w-3 h-3 text-yellow-400" /> {data.name}
+        </p>
         <div className="flex items-center gap-2 mb-2">
-          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500" style={{ width: `${data.relevance}%` }}></div>
+          <div className="flex-1 h-1.5 bg-slate-600 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-400" style={{ width: `${data.relevance}%` }}></div>
           </div>
-          <p className="text-xs text-blue-600 font-semibold">{data.relevance}%</p>
+          <p className="text-xs text-blue-300 font-mono font-bold">{data.relevance}%</p>
         </div>
-        <p className="text-xs text-slate-500 leading-relaxed">{data.description}</p>
+        <p className="text-[10px] text-slate-300 leading-relaxed opacity-90">{data.description}</p>
       </div>
     );
   }
@@ -33,28 +35,35 @@ export const TopicsChart: React.FC<TopicsChartProps> = ({ topics, competitors, o
   const [showSummary, setShowSummary] = useState(false);
   const [expandedCompetitor, setExpandedCompetitor] = useState<number | null>(null);
   
-  // Sort topics by relevance for better visualization
-  const sortedTopics = topics ? [...topics].sort((a, b) => b.relevance - a.relevance) : [];
+  // Sort topics by relevance for better visualization and normalize percentages
+  const sortedTopics = topics ? [...topics].map(t => ({
+    ...t,
+    relevance: (t.relevance > 0 && t.relevance <= 1) ? Math.round(t.relevance * 100) : Math.round(t.relevance)
+  })).sort((a, b) => b.relevance - a.relevance) : [];
+
+  const barColors = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e'];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-full flex flex-col relative w-full">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-full flex flex-col relative w-full overflow-hidden">
       <div className="mb-4 flex justify-between items-start">
         <div>
-           <h3 className="text-lg font-bold text-slate-800">Key Topics Detected</h3>
-           <p className="text-sm text-slate-500">Relevance and time spent on subjects.</p>
+           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+             <Sparkles className="w-5 h-5 text-blue-500" /> Key Topics Detected
+           </h3>
+           <p className="text-sm text-slate-500">Breakdown of conversation focus areas.</p>
         </div>
         <button 
           onClick={() => setShowSummary(true)}
           disabled={sortedTopics.length === 0}
-          className="text-xs flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50"
+          className="text-xs flex items-center gap-1.5 text-blue-600 hover:text-white hover:bg-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full transition-all font-bold disabled:opacity-50"
         >
           <FileText className="w-3.5 h-3.5" />
-          Summary
+          View Summary
         </button>
       </div>
       
       {/* Explicit height container to fix Recharts in flex/grid layouts */}
-      <div style={{ width: '100%', height: '300px' }}>
+      <div style={{ width: '100%', height: '300px' }} className="mt-2">
         {sortedTopics.length > 0 ? (
           <ResponsiveContainer>
             <BarChart 
@@ -69,16 +78,16 @@ export const TopicsChart: React.FC<TopicsChartProps> = ({ topics, competitors, o
                 width={140} 
                 tick={({ x, y, payload }) => {
                   const topic = sortedTopics.find(t => t.name === payload.value);
-                  const label = topic ? `${topic.name} (${topic.relevance}%)` : payload.value;
+                  const label = topic ? `${topic.name}` : payload.value;
                   return (
                     <text 
                       x={x} 
                       y={y} 
                       dy={4} 
                       textAnchor="end" 
-                      fill="#64748b" 
+                      fill="#475569" 
                       fontSize={11} 
-                      fontWeight={500}
+                      fontWeight={600}
                       style={{ cursor: 'pointer' }}
                       onClick={() => onTopicClick(payload.value)}
                     >
@@ -89,18 +98,18 @@ export const TopicsChart: React.FC<TopicsChartProps> = ({ topics, competitors, o
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f1f5f9', radius: 4 }} />
               <Bar 
                 dataKey="relevance" 
-                radius={[0, 4, 4, 0]} 
-                barSize={24}
+                radius={[0, 6, 6, 0]} 
+                barSize={20}
                 onClick={(data) => onTopicClick(data.name)}
                 style={{ cursor: 'pointer' }}
               >
                 {sortedTopics.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={index % 2 === 0 ? '#3b82f6' : '#60a5fa'} 
+                    fill={barColors[index % barColors.length]} 
                     className="hover:opacity-80 transition-opacity"
                   />
                 ))}
@@ -108,7 +117,7 @@ export const TopicsChart: React.FC<TopicsChartProps> = ({ topics, competitors, o
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+          <div className="flex items-center justify-center h-full text-slate-400 text-sm bg-slate-50 rounded-xl border border-dashed border-slate-200">
             No topics detected.
           </div>
         )}
@@ -118,25 +127,25 @@ export const TopicsChart: React.FC<TopicsChartProps> = ({ topics, competitors, o
       {competitors && competitors.length > 0 && (
         <div className="mt-6 pt-6 border-t border-slate-100 flex-grow">
           <div className="flex items-center gap-2 mb-4">
-             <div className="p-1.5 bg-rose-50 rounded-lg">
-                <Swords className="w-4 h-4 text-rose-500" />
+             <div className="p-1.5 bg-rose-100 rounded-lg">
+                <Swords className="w-4 h-4 text-rose-600" />
              </div>
-             <h4 className="text-sm font-bold text-slate-700">Competitor Battlecards</h4>
+             <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Competitor Battlecards</h4>
           </div>
           <div className="space-y-3">
             {competitors.map((comp, idx) => (
               <div 
                 key={idx} 
-                className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden transition-all"
+                className="bg-white border border-slate-200 rounded-xl overflow-hidden transition-all shadow-sm hover:shadow-md hover:border-rose-200"
               >
                 <div 
-                  className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-100"
+                  className="flex items-center justify-between p-3 cursor-pointer bg-slate-50/50"
                   onClick={() => setExpandedCompetitor(expandedCompetitor === idx ? null : idx)}
                 >
                    <div className="flex items-center gap-2">
-                     <span className="font-medium text-slate-700">{comp.name}</span>
-                     <span className="bg-white border border-slate-200 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
-                       {comp.mentionCount}x
+                     <span className="font-bold text-slate-700 text-sm">{comp.name}</span>
+                     <span className="bg-rose-50 text-rose-600 px-2 py-0.5 rounded text-[10px] font-bold border border-rose-100">
+                       {comp.mentionCount} Mentions
                      </span>
                    </div>
                    <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expandedCompetitor === idx ? 'rotate-90' : ''}`} />
@@ -144,18 +153,20 @@ export const TopicsChart: React.FC<TopicsChartProps> = ({ topics, competitors, o
                 
                 {/* Expanded Battlecard Details */}
                 {expandedCompetitor === idx && (
-                   <div className="p-3 bg-white border-t border-slate-200 text-xs animate-fade-in">
-                      <div className="mb-2">
-                         <p className="font-bold text-slate-500 uppercase text-[10px] mb-1">Context</p>
-                         <p className="text-slate-700 italic">"{comp.context}"</p>
+                   <div className="p-4 bg-white border-t border-slate-100 text-xs animate-fade-in">
+                      <div className="mb-3">
+                         <p className="font-bold text-slate-400 uppercase text-[10px] mb-1 flex items-center gap-1">
+                           <FileText className="w-3 h-3" /> Context
+                         </p>
+                         <p className="text-slate-700 italic bg-slate-50 p-2 rounded border border-slate-100">"{comp.context}"</p>
                       </div>
                       {comp.suggestedRebuttal && (
-                        <div className="bg-rose-50 p-2 rounded border border-rose-100">
-                           <div className="flex items-center gap-1.5 mb-1 text-rose-700 font-bold">
+                        <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                           <div className="flex items-center gap-1.5 mb-1 text-indigo-700 font-bold uppercase text-[10px]">
                               <Shield className="w-3 h-3" />
                               <span>AI Rebuttal</span>
                            </div>
-                           <p className="text-slate-700">{comp.suggestedRebuttal}</p>
+                           <p className="text-slate-700 font-medium leading-relaxed">{comp.suggestedRebuttal}</p>
                         </div>
                       )}
                    </div>
@@ -168,30 +179,30 @@ export const TopicsChart: React.FC<TopicsChartProps> = ({ topics, competitors, o
 
       {/* Topics Summary Modal */}
       {showSummary && (
-        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 rounded-xl p-6 flex flex-col animate-fade-in">
-          <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+        <div className="absolute inset-0 bg-white z-50 p-0 flex flex-col animate-fade-in">
+          <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-500" />
               Topics Summary
             </h3>
             <button 
               onClick={() => setShowSummary(false)}
-              className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              className="p-1.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="overflow-y-auto custom-scrollbar flex-grow space-y-4 pr-2">
+          <div className="overflow-y-auto custom-scrollbar flex-grow p-6 space-y-4">
             {sortedTopics.map((topic, idx) => (
-              <div key={idx} className="group border-b border-slate-50 last:border-0 pb-4 last:pb-0">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-semibold text-sm text-slate-800 flex items-center gap-1">
-                    <ChevronRight className="w-3 h-3 text-slate-300" />
+              <div key={idx} className="group p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ background: barColors[idx % barColors.length] }}></span>
                     {topic.name}
                   </span>
-                  <span className="text-xs font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{topic.relevance}%</span>
+                  <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{topic.relevance}%</span>
                 </div>
-                <p className="text-xs text-slate-500 leading-relaxed pl-4">{topic.description}</p>
+                <p className="text-xs text-slate-600 leading-relaxed pl-4 border-l-2 border-slate-100">{topic.description}</p>
               </div>
             ))}
           </div>

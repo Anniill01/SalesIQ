@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { CoachingInsights } from '../types';
-import { CheckCircle2, AlertCircle, Sparkles, CheckSquare, Calendar, ArrowRight, Target, HelpCircle, ShieldAlert, Zap, Lightbulb, TrendingUp, UserPlus } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Sparkles, CheckSquare, Calendar, ArrowRight, Target, HelpCircle, ShieldAlert, Zap, Lightbulb, TrendingUp, UserPlus, Megaphone, Check } from 'lucide-react';
 
 interface CoachingCardProps {
   coaching: CoachingInsights;
@@ -27,7 +27,6 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
       setAssignedActions(prev => prev.filter(i => i !== index));
     } else {
       setAssignedActions(prev => [...prev, index]);
-      // Ideally trigger API call here
     }
   };
 
@@ -39,7 +38,6 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
     }
   };
 
-  // Helper for Predicted Outcome colors
   const getOutcomeColorStyles = (label: string) => {
     if (label === 'High Likelihood') return { text: 'text-emerald-700', bg: 'bg-emerald-50', bar: 'bg-emerald-500', border: 'border-emerald-200' };
     if (label === 'Medium Likelihood') return { text: 'text-amber-700', bg: 'bg-amber-50', bar: 'bg-amber-500', border: 'border-amber-200' };
@@ -50,6 +48,18 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
     ? getOutcomeColorStyles(coaching.predictedOutcome.label)
     : { text: 'text-slate-700', bg: 'bg-slate-50', bar: 'bg-slate-300', border: 'border-slate-200' };
 
+  // Normalize scores (handle 0.8 vs 80)
+  const pitchScoreRaw = coaching.salesPitchAssessment?.score || 0;
+  const pitchScore = (pitchScoreRaw > 0 && pitchScoreRaw <= 1) ? Math.round(pitchScoreRaw * 100) : Math.round(pitchScoreRaw);
+
+  const outcomeScoreRaw = coaching.predictedOutcome?.score || 0;
+  const outcomeScore = (outcomeScoreRaw > 0 && outcomeScoreRaw <= 1) ? Math.round(outcomeScoreRaw * 100) : Math.round(outcomeScoreRaw);
+
+  // Radius for pitch gauge
+  const radius = 36;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pitchScore / 100) * circumference;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
       
@@ -57,7 +67,7 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
       <div className="md:col-span-2 xl:col-span-4 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl shadow-lg p-8 text-white relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-white/20 rounded-lg">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm border border-white/20">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <h3 className="font-bold text-indigo-100 uppercase tracking-wider text-sm">AI Executive Summary</h3>
@@ -66,10 +76,10 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
             {coaching.overallSummary}
           </p>
         </div>
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl mix-blend-overlay"></div>
       </div>
 
-      {/* Action Items (Next Steps) - Large Section */}
+      {/* Action Items (Next Steps) */}
       <div className="md:col-span-2 xl:col-span-2 bg-blue-50 rounded-xl border border-blue-100 p-6 flex flex-col h-full">
         <div className="flex items-center gap-2 mb-4">
           <div className="p-1.5 bg-blue-100 rounded-lg">
@@ -160,7 +170,7 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
         </div>
       </div>
 
-      {/* Predicted Outcome - NEW VISUALIZATION */}
+      {/* Predicted Outcome */}
       {coaching.predictedOutcome && (
         <div className={`md:col-span-2 xl:col-span-2 ${outcomeStyles.bg} border ${outcomeStyles.border} rounded-xl p-6 shadow-sm flex flex-col h-full`}>
            <div className="flex items-center justify-between mb-6">
@@ -178,10 +188,10 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
            <div className="mb-6 flex-grow flex flex-col justify-center">
               <div className="flex justify-between items-end mb-2">
                  <span className="text-sm font-medium text-slate-600">Win Probability</span>
-                 <span className={`text-3xl font-extrabold ${outcomeStyles.text}`}>{coaching.predictedOutcome.score}%</span>
+                 <span className={`text-4xl font-extrabold ${outcomeStyles.text}`}>{outcomeScore}%</span>
               </div>
               <div className="w-full h-4 bg-white rounded-full overflow-hidden border border-slate-200/50 shadow-inner">
-                 <div className={`h-full rounded-full transition-all duration-1000 ${outcomeStyles.bar}`} style={{ width: `${coaching.predictedOutcome.score}%` }}></div>
+                 <div className={`h-full rounded-full transition-all duration-1000 ${outcomeStyles.bar}`} style={{ width: `${outcomeScore}%` }}></div>
               </div>
            </div>
            
@@ -191,6 +201,88 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
            </div>
         </div>
       )}
+
+      {/* Sales Pitch Effectiveness (Redesigned) */}
+      {coaching.salesPitchAssessment && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6 md:col-span-2 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600">
+               <Megaphone className="w-5 h-5" />
+            </div>
+            <h3 className="font-bold text-indigo-900 text-lg">Pitch Effectiveness (First 90s)</h3>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-8 items-center justify-center">
+             {/* Radial Score */}
+             <div className="relative w-32 h-32 flex-shrink-0">
+                <svg className="w-full h-full transform -rotate-90">
+                   <circle
+                     cx="64" cy="64" r="36"
+                     stroke="#f1f5f9" strokeWidth="8"
+                     fill="transparent"
+                   />
+                   <circle
+                     cx="64" cy="64" r="36"
+                     stroke="currentColor" strokeWidth="8"
+                     fill="transparent"
+                     strokeDasharray={2 * Math.PI * 36}
+                     strokeDashoffset={(2 * Math.PI * 36) - (pitchScore / 100) * (2 * Math.PI * 36)}
+                     strokeLinecap="round"
+                     className={`${pitchScore >= 80 ? 'text-indigo-500' : pitchScore >= 60 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000 ease-out`}
+                   />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                   <span className="text-3xl font-extrabold text-slate-800">{pitchScore}</span>
+                   <span className="text-[10px] font-bold text-slate-400 uppercase">Score</span>
+                </div>
+             </div>
+
+             {/* Breakdown */}
+             <div className="flex-grow space-y-3 w-full">
+               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex gap-3">
+                  <Target className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                     <h4 className="text-xs font-bold text-slate-700 uppercase mb-0.5">Hook & Clarity</h4>
+                     <p className="text-xs text-slate-500 leading-snug">{coaching.salesPitchAssessment.hook || coaching.salesPitchAssessment.clarity}</p>
+                  </div>
+               </div>
+               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex gap-3">
+                  <ArrowRight className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                     <h4 className="text-xs font-bold text-slate-700 uppercase mb-0.5">Call to Action</h4>
+                     <p className="text-xs text-slate-500 leading-snug">{coaching.salesPitchAssessment.callToAction}</p>
+                  </div>
+               </div>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Key Objections Handled (Redesigned) */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 md:col-span-2 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600">
+             <ShieldAlert className="w-5 h-5" />
+          </div>
+          <h3 className="font-bold text-slate-800 text-lg">Key Objections Handled</h3>
+        </div>
+        <ul className="space-y-3">
+           {(coaching.objectionsHandled || []).map((item, idx) => (
+            <li key={idx} className="flex gap-3 text-sm text-slate-700 bg-emerald-50/50 p-3 rounded-lg border border-emerald-100 items-start">
+               <div className="bg-emerald-100 text-emerald-600 w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 font-bold mt-0.5 border border-emerald-200">
+                <Check className="w-3.5 h-3.5" />
+              </div>
+               <span className="font-medium leading-relaxed">{item}</span>
+            </li>
+           ))}
+           {(!coaching.objectionsHandled || coaching.objectionsHandled.length === 0) && (
+             <div className="text-center py-8 text-slate-400">
+                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                <p className="text-sm italic">No major objections detected in this call.</p>
+             </div>
+           )}
+        </ul>
+      </div>
 
       {/* Strengths (Winning Moments) - Full Height */}
       <div className="md:col-span-1 xl:col-span-2 bg-emerald-50 rounded-xl border border-emerald-100 p-6">
@@ -202,7 +294,7 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
         </div>
         <ul className="space-y-4">
           {(coaching.strengths || []).map((item, idx) => (
-            <li key={idx} className="flex gap-3 text-sm text-emerald-800 bg-white/60 p-3 rounded-lg border border-emerald-100/50">
+            <li key={idx} className="flex gap-3 text-sm text-emerald-800 bg-white/60 p-3 rounded-lg border border-emerald-100/50 shadow-sm">
               <span className="bg-emerald-200 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 font-bold mt-0.5 border border-emerald-300">
                 {idx + 1}
               </span>
@@ -222,7 +314,7 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
         </div>
         <ul className="space-y-4">
           {(coaching.missedOpportunities || []).map((item, idx) => (
-            <li key={idx} className="flex gap-3 text-sm text-amber-800 bg-white/60 p-3 rounded-lg border border-amber-100/50">
+            <li key={idx} className="flex gap-3 text-sm text-amber-800 bg-white/60 p-3 rounded-lg border border-amber-100/50 shadow-sm">
               <span className="bg-amber-200 text-amber-700 w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 font-bold mt-0.5 border border-amber-300">
                 {idx + 1}
               </span>
@@ -243,7 +335,7 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {coaching.keyQuestions && coaching.keyQuestions.length > 0 ? (
              (coaching.keyQuestions || []).map((item, idx) => (
-              <li key={idx} className="flex gap-3 text-sm text-purple-800 items-start bg-white/60 p-3 rounded-lg border border-purple-100">
+              <li key={idx} className="flex gap-3 text-sm text-purple-800 items-start bg-white/60 p-3 rounded-lg border border-purple-100 shadow-sm">
                  <span className="bg-purple-200 text-purple-700 w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 font-bold mt-0.5 border border-purple-300">
                   Q
                 </span>
@@ -258,43 +350,19 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
         </div>
       </div>
 
-       {/* Sales Pitch Effectiveness */}
-       {coaching.salesPitchAssessment && (
-        <div className="bg-indigo-50 rounded-xl border border-indigo-100 p-6 md:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-5 h-5 text-indigo-600" />
-            <h3 className="font-bold text-indigo-900">Pitch Effectiveness (First 90s)</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <div className="bg-white/60 p-5 rounded-lg border border-indigo-50 flex flex-col justify-center items-center text-center">
-                <div className="text-4xl font-extrabold text-indigo-600 mb-1">{coaching.salesPitchAssessment.score}<span className="text-lg text-indigo-300">/100</span></div>
-                <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Overall Pitch Score</div>
-             </div>
-             <div className="space-y-4">
-               <div className="bg-white/40 p-3 rounded-lg border border-indigo-50/50">
-                  <h4 className="text-xs font-bold text-indigo-800 uppercase mb-1">Clarity & Hook</h4>
-                  <p className="text-sm text-slate-700 leading-snug">{coaching.salesPitchAssessment.hook || coaching.salesPitchAssessment.clarity}</p>
-               </div>
-               <div className="bg-white/40 p-3 rounded-lg border border-indigo-50/50">
-                  <h4 className="text-xs font-bold text-indigo-800 uppercase mb-1">Call to Action</h4>
-                  <p className="text-sm text-slate-700 leading-snug">{coaching.salesPitchAssessment.callToAction}</p>
-               </div>
-             </div>
-          </div>
-        </div>
-      )}
-
       {/* Strategies to Close */}
-      <div className="bg-fuchsia-50 rounded-xl border border-fuchsia-100 p-6 md:col-span-2">
+      <div className="bg-fuchsia-50 rounded-xl border border-fuchsia-100 p-6 md:col-span-2 xl:col-span-4">
         <div className="flex items-center gap-2 mb-4">
-          <Target className="w-5 h-5 text-fuchsia-600" />
-          <h3 className="font-bold text-fuchsia-900">Closing Strategies</h3>
+          <div className="p-1.5 bg-fuchsia-100 rounded-lg">
+             <Target className="w-5 h-5 text-fuchsia-600" />
+          </div>
+          <h3 className="font-bold text-fuchsia-900 text-lg">Closing Strategies</h3>
         </div>
-        <ul className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
            {(coaching.closingSuggestions || []).map((item, idx) => (
-            <li key={idx} className="flex gap-3 items-start text-sm bg-white/60 p-3 rounded-lg border border-fuchsia-100 shadow-sm">
-               <div className="mt-0.5 flex-shrink-0">
-                  <ArrowRight className="w-4 h-4 text-fuchsia-600" />
+            <li key={idx} className="flex gap-3 items-start text-sm bg-white/60 p-4 rounded-lg border border-fuchsia-100 shadow-sm">
+               <div className="mt-0.5 flex-shrink-0 bg-fuchsia-100 p-1 rounded-full">
+                  <ArrowRight className="w-3.5 h-3.5 text-fuchsia-600" />
                </div>
                <div>
                  <span className="block font-bold text-fuchsia-900 mb-1">{item.strategy}</span>
@@ -303,30 +371,9 @@ export const CoachingCard: React.FC<CoachingCardProps> = ({ coaching }) => {
             </li>
           ))}
            {(!coaching.closingSuggestions || coaching.closingSuggestions.length === 0) && (
-             <li className="text-sm text-slate-500 italic">No closing suggestions available.</li>
+             <li className="text-sm text-slate-500 italic p-4">No closing suggestions available.</li>
            )}
-        </ul>
-      </div>
-
-      {/* Key Objections Handled */}
-      <div className="bg-red-50 rounded-xl border border-red-100 p-6 md:col-span-2">
-        <div className="flex items-center gap-2 mb-4">
-          <ShieldAlert className="w-5 h-5 text-red-600" />
-          <h3 className="font-bold text-red-900">Key Objections Handled</h3>
         </div>
-        <ul className="space-y-3">
-           {(coaching.objectionsHandled || []).map((item, idx) => (
-            <li key={idx} className="flex gap-3 text-sm text-red-800 bg-white/50 p-2.5 rounded border border-red-100/50 items-start">
-               <span className="bg-red-200/50 text-red-700 w-5 h-5 rounded-full flex items-center justify-center text-xs flex-shrink-0 font-bold mt-0.5">
-                !
-              </span>
-               <span className="font-medium">{item}</span>
-            </li>
-          ))}
-           {(!coaching.objectionsHandled || coaching.objectionsHandled.length === 0) && (
-             <li className="text-sm text-slate-500 italic">No major objections detected.</li>
-           )}
-        </ul>
       </div>
 
     </div>
