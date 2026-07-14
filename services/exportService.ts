@@ -473,6 +473,18 @@ export const exportCompliancePanel = (compliance: ComplianceCheck, format: 'CSV'
   downloadCSV(csvContent, `Compliance_Report.csv`);
 };
 
+export const downloadScript = (script: string, filename: string) => {
+  const blob = new Blob([script], { type: 'text/plain;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 export const exportDealReport = (data: FullDealAnalysis, format: 'CSV' | 'PDF' = 'CSV') => {
     if (format === 'PDF') {
         const html = `

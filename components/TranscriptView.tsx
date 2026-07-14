@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { TranscriptSegment } from '../types';
-import { User, Headphones, Search, AlertTriangle, Filter, Play, Volume2, AlertCircle, Lightbulb, MessageSquare, LayoutList, AlignLeft } from 'lucide-react';
+import { User, Headphones, Search, AlertTriangle, Filter, Play, Volume2, AlertCircle, Lightbulb, MessageSquare, LayoutList, AlignLeft, Download } from 'lucide-react';
+import { downloadScript } from '../services/exportService';
 
 interface TranscriptViewProps {
   transcript: TranscriptSegment[];
@@ -25,6 +26,11 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('TABLE');
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRowRef = useRef<HTMLTableRowElement | HTMLDivElement>(null);
+
+  const handleDownload = () => {
+    const text = transcript.map(s => `[${s.timestamp}] ${s.speaker}: ${s.text}`).join('\n');
+    downloadScript(text, 'Call_Transcript.txt');
+  };
 
   const filteredTranscript = transcript.filter(segment => {
     const matchesSearch = segment.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -270,7 +276,15 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-center">
-          
+           <button 
+             onClick={handleDownload}
+             className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors rounded-lg flex items-center gap-2 text-xs font-bold bg-white border border-slate-200"
+             title="Download Transcript as .txt"
+           >
+              <Download className="w-4 h-4" />
+              <span className="hidden lg:inline">Download</span>
+           </button>
+
            {/* View Toggle */}
            <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
              <button 

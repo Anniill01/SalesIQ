@@ -217,6 +217,7 @@ const App: React.FC = () => {
               committee={result.dealIntelligence.buyingCommittee}
               stage={result.dealIntelligence.dealStage}
               intents={result.dealIntelligence.intents}
+              coaching={result.coachingCard}
             />
           </div>
         );

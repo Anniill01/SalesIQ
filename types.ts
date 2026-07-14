@@ -292,6 +292,15 @@ export interface FullDealAnalysis {
   missedOpportunities: string[];
   keyMoments: string[];
   dealHealthChecks: DealHealthCheck[];
+  // New: Call Coach variables added to Deal Intelligence
+  coachingInsights?: {
+    strengths: string[];
+    improvementAreas: string[];
+    keyTakeaways: string[];
+  };
+  keyQuestions?: string[];
+  closingSuggestions?: ClosingStrategy[];
+  consolidatedScript?: string; // The "script" of the deal
 }
 
 export interface SavedDeal {

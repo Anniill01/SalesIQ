@@ -1,16 +1,17 @@
 
 import React from 'react';
-import { DealRisk, BuyingCommitteeMember, DealStageAssessment, CallIntent } from '../types';
-import { AlertTriangle, Users, Briefcase, ChevronRight, ShieldCheck, TrendingUp, AlertOctagon, Target, DollarSign, Clock, Search, XCircle } from 'lucide-react';
+import { DealRisk, BuyingCommitteeMember, DealStageAssessment, CallIntent, CoachingInsights } from '../types';
+import { AlertTriangle, Users, Briefcase, ChevronRight, ShieldCheck, TrendingUp, AlertOctagon, Target, DollarSign, Clock, Search, XCircle, Lightbulb, ThumbsUp, ListChecks } from 'lucide-react';
 
 interface DealIntelligenceProps {
   risk: DealRisk;
   committee: BuyingCommitteeMember[];
   stage: DealStageAssessment;
   intents?: CallIntent[];
+  coaching?: CoachingInsights;
 }
 
-export const DealIntelligence: React.FC<DealIntelligenceProps> = ({ risk, committee, stage, intents }) => {
+export const DealIntelligence: React.FC<DealIntelligenceProps> = ({ risk, committee, stage, intents, coaching }) => {
   // Normalize scores
   const riskScore = (risk.riskScore > 0 && risk.riskScore <= 1) ? Math.round(risk.riskScore * 100) : Math.round(risk.riskScore);
 
@@ -163,6 +164,50 @@ export const DealIntelligence: React.FC<DealIntelligenceProps> = ({ risk, commit
             )}
          </div>
       </div>
+
+      {/* Coaching Integration in Deal Intel */}
+      {coaching && (
+        <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
+           <div className="bg-emerald-50 rounded-xl border border-emerald-100 p-5 shadow-sm">
+              <h3 className="font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                 <ThumbsUp className="w-4 h-4" /> Winning Moments
+              </h3>
+              <ul className="space-y-2">
+                 {(coaching.strengths || []).slice(0, 3).map((m, i) => (
+                     <li key={i} className="text-xs text-emerald-800 flex gap-2 items-start">
+                         <span className="font-bold">•</span> {m}
+                     </li>
+                 ))}
+              </ul>
+           </div>
+           
+           <div className="bg-amber-50 rounded-xl border border-amber-100 p-5 shadow-sm">
+              <h3 className="font-bold text-amber-900 mb-3 flex items-center gap-2">
+                 <AlertTriangle className="w-4 h-4" /> Improvement Areas
+              </h3>
+              <ul className="space-y-2">
+                 {(coaching.improvementAreas || []).slice(0, 3).map((m, i) => (
+                     <li key={i} className="text-xs text-amber-900 flex gap-2 items-start">
+                          <span className="font-bold">•</span> {m}
+                     </li>
+                 ))}
+              </ul>
+           </div>
+
+           <div className="bg-blue-50 rounded-xl border border-blue-100 p-5 shadow-sm">
+              <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+                 <Lightbulb className="w-4 h-4" /> Key Takeaways
+              </h3>
+              <ul className="space-y-2">
+                 {(coaching.keyTakeaways || []).slice(0, 3).map((m, i) => (
+                     <li key={i} className="text-xs text-blue-900 flex gap-2 items-start">
+                          <span className="font-bold">•</span> {m}
+                     </li>
+                 ))}
+              </ul>
+           </div>
+        </div>
+      )}
 
     </div>
   );

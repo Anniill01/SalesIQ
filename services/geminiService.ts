@@ -206,6 +206,29 @@ export const analyzeFullDeal = async (interactions: DealInteraction[]): Promise<
                         details: { type: Type.STRING }
                     }
                 }
+            },
+            coachingInsights: {
+                type: Type.OBJECT,
+                properties: {
+                    strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    improvementAreas: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    keyTakeaways: { type: Type.ARRAY, items: { type: Type.STRING } }
+                }
+            },
+            keyQuestions: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Strategic questions the rep should have asked or did ask well." },
+            closingSuggestions: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        strategy: { type: Type.STRING },
+                        rationale: { type: Type.STRING }
+                    }
+                }
+            },
+            consolidatedScript: { 
+                type: Type.STRING, 
+                description: "A chronological 'script' or summary of the most critical dialogue/exchanges across all interactions." 
             }
           }
         }

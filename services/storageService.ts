@@ -162,7 +162,22 @@ export const getDemoDealAnalysis = (): FullDealAnalysis => {
       { check: "Budget Confirmed", status: "Fail", details: "Budget is frozen for Q4. Funds must be 'found'." },
       { check: "Competitor Analysis", status: "Warning", details: "Competitor X is known to be in the account." },
       { check: "Paper Process", status: "Pass", details: "Legal review started." }
-    ]
+    ],
+    coachingInsights: {
+      strengths: ["Strong technical alignment with CTO", "Effective use of customer testimonials"],
+      improvementAreas: ["Need to engage Finance earlier", "Value proposition for CFO is currently weak"],
+      keyTakeaways: ["Technical win secured", "Procurement is the primary bottleneck"]
+    },
+    keyQuestions: [
+      "How does the current budget freeze impact your 2024 roadmap?",
+      "What specific ROI metrics does Mike (CFO) care most about?",
+      "If we can demonstrate a 6-month payback, does that change the budget conversation?"
+    ],
+    closingSuggestions: [
+      { strategy: "ROI-Based Business Case", rationale: "CFO is the blocker; need hard numbers to justify spend during freeze." },
+      { strategy: "Phased Implementation", rationale: "Lower initial cost to fit into remaining Q4 'Innovation' budget." }
+    ],
+    consolidatedScript: "SalesIQ: Hi Sarah, thanks for joining. How are the CI/CD pipelines treating you?\nSarah (CTO): Honestly, they're a mess. We're losing 4 hours a week per dev.\nSalesIQ: That's significant. If we could cut that to 15 minutes, what would that mean for your roadmap?\nSarah: It would be a game changer. We could pull in the Q1 release.\n... [Later in Negotiation] ...\nMike (CFO): I like the tech, but we have a strict freeze on new SaaS tools for Q4.\nSalesIQ: Understood, Mike. If we can show that this tool pays for itself in 6 months through dev productivity, is there an 'Innovation' bucket we can look at?\nMike: Possibly, but the ROI case has to be bulletproof."
   };
 };
 

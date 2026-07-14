@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { FullDealAnalysis } from '../../types';
-import { TrendingUp, Users, AlertTriangle, CheckCircle2, ArrowRight, Shield, Zap, LayoutDashboard, History, Download, FileText, FileSpreadsheet, AlertOctagon, ThumbsUp, XCircle } from 'lucide-react';
-import { exportDealReport } from '../../services/exportService';
+import { TrendingUp, Users, AlertTriangle, CheckCircle2, ArrowRight, Shield, Zap, LayoutDashboard, History, Download, FileText, FileSpreadsheet, AlertOctagon, ThumbsUp, XCircle, HelpCircle, Lightbulb, MessageSquare, Target } from 'lucide-react';
+import { exportDealReport, downloadScript } from '../../services/exportService';
 
 interface DealDashboardProps {
   analysis: FullDealAnalysis;
@@ -22,6 +22,21 @@ export const DealDashboard: React.FC<DealDashboardProps> = ({ analysis }) => {
     setShowExportMenu(false);
   };
 
+  const handleDownloadScript = () => {
+    if (analysis.consolidatedScript) {
+      downloadScript(analysis.consolidatedScript, `Deal_Script_${analysis.dealName.replace(/\s+/g, '_')}.txt`);
+    }
+    setShowExportMenu(false);
+  };
+
+  // Helper to normalize values (convert 0.2 to 20, keep 20 as 20)
+  const normalize = (val: number | undefined | null) => {
+    if (val === undefined || val === null) return 0;
+    return (val > 0 && val <= 1) ? Math.round(val * 100) : Math.round(val);
+  };
+
+  const winProbScore = normalize(analysis.winProbability.score);
+
   return (
     <div className="animate-fade-in space-y-6 pb-20">
       {/* Header */}
@@ -38,7 +53,7 @@ export const DealDashboard: React.FC<DealDashboardProps> = ({ analysis }) => {
         <div className="flex items-center gap-4">
             <div className={`px-6 py-4 rounded-xl border flex flex-col items-center min-w-[200px] ${getWinProbColor(analysis.winProbability.label)}`}>
                <span className="text-xs font-bold uppercase tracking-wider opacity-80">Win Probability</span>
-               <span className="text-3xl font-extrabold">{analysis.winProbability.score}%</span>
+               <span className="text-3xl font-extrabold">{winProbScore}%</span>
                <span className="text-xs font-bold mt-1">{analysis.winProbability.label}</span>
             </div>
 
@@ -51,7 +66,7 @@ export const DealDashboard: React.FC<DealDashboardProps> = ({ analysis }) => {
                     <Download className="w-6 h-6" />
                 </button>
                 {showExportMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
                     <button 
                       onClick={() => handleExport('PDF')}
                       className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-50"
@@ -60,9 +75,16 @@ export const DealDashboard: React.FC<DealDashboardProps> = ({ analysis }) => {
                     </button>
                     <button 
                       onClick={() => handleExport('CSV')}
-                      className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-50"
                     >
                       <FileSpreadsheet className="w-4 h-4 text-green-600" /> Excel / CSV
+                    </button>
+                    <button 
+                      onClick={handleDownloadScript}
+                      disabled={!analysis.consolidatedScript}
+                      className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <MessageSquare className="w-4 h-4 text-blue-600" /> Download Deal Script
                     </button>
                   </div>
                 )}
@@ -105,6 +127,37 @@ export const DealDashboard: React.FC<DealDashboardProps> = ({ analysis }) => {
               </div>
            </div>
 
+           {/* New: Deal Coaching Insights */}
+           {analysis.coachingInsights && (
+             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5 text-yellow-500" /> Deal Coaching Insights
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Improvement Areas</h4>
+                      <ul className="space-y-2">
+                        {(analysis.coachingInsights.improvementAreas || []).map((item, i) => (
+                          <li key={i} className="text-sm text-slate-600 flex gap-2 items-start">
+                             <span className="text-amber-500 font-bold">•</span> {item}
+                          </li>
+                        ))}
+                      </ul>
+                   </div>
+                   <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Key Takeaways</h4>
+                      <ul className="space-y-2">
+                        {(analysis.coachingInsights.keyTakeaways || []).map((item, i) => (
+                          <li key={i} className="text-sm text-slate-600 flex gap-2 items-start">
+                             <span className="text-indigo-500 font-bold">•</span> {item}
+                          </li>
+                        ))}
+                      </ul>
+                   </div>
+                </div>
+             </div>
+           )}
+
            {/* Journey Map */}
            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
               <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -138,6 +191,28 @@ export const DealDashboard: React.FC<DealDashboardProps> = ({ analysis }) => {
                  ))}
               </div>
            </div>
+
+           {/* New: Consolidated Deal Script */}
+           {analysis.consolidatedScript && (
+             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-blue-500" /> Consolidated Deal Script
+                  </h3>
+                  <button 
+                    onClick={handleDownloadScript}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" /> Download .txt
+                  </button>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 max-h-[400px] overflow-y-auto custom-scrollbar">
+                   <pre className="text-xs text-slate-600 whitespace-pre-wrap font-sans leading-relaxed">
+                      {analysis.consolidatedScript}
+                   </pre>
+                </div>
+             </div>
+           )}
 
            {/* Stakeholders */}
            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -184,6 +259,39 @@ export const DealDashboard: React.FC<DealDashboardProps> = ({ analysis }) => {
                  ))}
               </ul>
            </div>
+
+           {/* New: Key Questions */}
+           {analysis.keyQuestions && analysis.keyQuestions.length > 0 && (
+             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-purple-500" /> Strategic Questions
+                </h3>
+                <ul className="space-y-3">
+                   {analysis.keyQuestions.map((q, idx) => (
+                     <li key={idx} className="text-sm text-slate-600 flex gap-2 items-start bg-purple-50 p-2 rounded border border-purple-100">
+                        <span className="text-purple-500 font-bold">Q:</span> {q}
+                     </li>
+                   ))}
+                </ul>
+             </div>
+           )}
+
+           {/* New: Closing Strategies */}
+           {analysis.closingSuggestions && analysis.closingSuggestions.length > 0 && (
+             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-rose-500" /> Closing Strategies
+                </h3>
+                <div className="space-y-4">
+                   {analysis.closingSuggestions.map((s, idx) => (
+                     <div key={idx} className="bg-rose-50 p-3 rounded-lg border border-rose-100">
+                        <p className="text-sm font-bold text-rose-900 mb-1">{s.strategy}</p>
+                        <p className="text-xs text-slate-600">{s.rationale}</p>
+                     </div>
+                   ))}
+                </div>
+             </div>
+           )}
            
            {/* Deal Health QA (New) */}
            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
